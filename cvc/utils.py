@@ -25,8 +25,8 @@ def min_power_greater_than(
     >>> min_power_greater_than(48, 2)
     64.0
     """
-    p = math.ceil(math.log(value, base))
-    return math.pow(base, p)
+    p = math.ceil(math.log(value, base))#base的多少次幂/次方是value，取整，往大了取
+    return math.pow(base, p) #返回base的p次方。也就就是返回，base的多少次方里最小且比value大的那个
 
 
 def load_json_params(param_fname: str, **kwargs) -> Dict[str, Union[int, float, str]]:
