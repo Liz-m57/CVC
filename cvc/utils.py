@@ -30,17 +30,18 @@ def min_power_greater_than(
 
 
 def load_json_params(param_fname: str, **kwargs) -> Dict[str, Union[int, float, str]]:
+    #函数参数前的**表示，如果传入多个参数，除了前面按照固定顺序，后面的都传成一个kwargs
     """Load in the param_fname, overriding with given kwargs"""
-    with open(param_fname) as source:
-        params = json.load(source)
-    for k, v in kwargs.items():
-        if k not in params:
+    with open(param_fname) as source: #打开名为param_fname的文件
+        params = json.load(source) #加载参数
+    for k, v in kwargs.items(): #如果有文件之外的参数传递，例：params = load_json_params("params.json", learning_rate=0.001, epochs=10)
+        if k not in params: #原来文件中有的则覆盖，没有则新增
             logging.warning(f"Key {k} not in original parameters")
         params[k] = v
-    return params
+    return params #返回新的参数文件
 
 
-def ensure_arr(x: Any) -> np.ndarray:
+def ensure_arr(x: Any) -> np.ndarray: #Return x as a np.array
     """Return x as a np.array"""
     if isinstance(x, np.matrix):
         return np.squeeze(np.asarray(x))
@@ -58,7 +59,7 @@ def ensure_arr(x: Any) -> np.ndarray:
         raise TypeError(f"Unrecognized type: {type(x)}")
 
 
-def ensure_tensor(x: Any, **kwargs) -> torch.Tensor:
+def ensure_tensor(x: Any, **kwargs) -> torch.Tensor: #输入 x 转换为 PyTorch 张量，并将额外的关键字参数传递给 torch.tensor()。
     """Return x as a torch tensor, kwargs are passed through"""
     if isinstance(x, torch.Tensor):
         return x
@@ -91,7 +92,7 @@ def is_numeric_scalar(x: Any) -> bool:
     return False
 
 
-def is_all_unique(x: Collection[Any]) -> bool:
+def is_all_unique(x: Collection[Any]) -> bool: #判断给定的可迭代对象x中的元素是否全部唯一，返回布尔值
     """
     Return whether the given iterable is all unique
     >>> is_all_unique(['x', 'y'])
@@ -102,7 +103,7 @@ def is_all_unique(x: Collection[Any]) -> bool:
     return len(set(x)) == len(x)
 
 
-def dedup(x: Iterable[Any]) -> List[Any]:
+def dedup(x: Iterable[Any]) -> List[Any]: #对x去重，并且保留元素首次出现的顺序。
     """
     Dedup the given iterable, preserving order of occurrence
     >>> dedup([1, 2, 0, 1, 3, 2])
@@ -113,7 +114,7 @@ def dedup(x: Iterable[Any]) -> List[Any]:
     # https://stackoverflow.com/questions/480214/how-do-you-remove-duplicates-from-a-list-whilst-preserving-order
     # Python 3.7 and above guarantee that dict is insertion ordered
     # sets do NOT do this, so list(set(x)) will lose order information
-    return list(dict.fromkeys(x))
+    return list(dict.fromkeys(x)) #生成一个以x中元素为键的字典，字典默认不允许重复键，因此可以达到去重的效果，同时字典保持了插入顺序。
 
 
 def get_device(i: Optional[int] = None) -> torch.device:
@@ -135,7 +136,7 @@ def get_device(i: Optional[int] = None) -> torch.device:
     return d
 
 
-def set_visible_device(devices: List[int] = [0]):
+def set_visible_device(devices: List[int] = [0]): #
     """
     Set the visible GPU(s) using env variable.
     """
