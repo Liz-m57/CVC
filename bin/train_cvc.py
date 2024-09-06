@@ -30,9 +30,12 @@ import cvc.utils as utils
 BLOSUM = custom_metrics.load_blosum()
 
 
-def compute_metrics(pred: EvalPrediction, top_n: int = 3) -> Dict[str, float]:
+def compute_metrics(pred: EvalPrediction, top_n: int = 3) -> Dict[str, float]: 
+        #pred和top_n是函数中的形参名
+        #函数注解，用 : 类型 的形式指定参数类型，用 -> 类型 的形式指定函数的返回值类型。
+        #Python 解释器并不会因为这些注解而提供额外的校验，相当于注释
     """
-    Compute metrics to report
+    Compute metrics to report #统计指标
     top_n controls the top_n accuracy reported
     """
     # labels are -100 for masked tokens and value to predict for masked token
