@@ -69,7 +69,8 @@ def ensure_tensor(x: Any, **kwargs) -> torch.Tensor: #输入 x 转换为 PyTorch
         raise TypeError(f"Unrecognized type: {type(x)}")
 
 
-def is_numeric_scalar(x: Any) -> bool:
+def is_numeric_scalar(x: Any) -> bool: 
+    """判断输入的值 x 是否为数值类型，支持整数、浮点数、以及可以转换为浮点数的字符串"""
     """
     Returns if the given item is numeric
     >>> is_numeric_scalar("hello")
@@ -117,7 +118,7 @@ def dedup(x: Iterable[Any]) -> List[Any]: #对x去重，并且保留元素首次
     return list(dict.fromkeys(x)) #生成一个以x中元素为键的字典，字典默认不允许重复键，因此可以达到去重的效果，同时字典保持了插入顺序。
 
 
-def get_device(i: Optional[int] = None) -> torch.device:
+def get_device(i: Optional[int] = None) -> torch.device: #i要是torch.device类型的，或者int i指示第几个gpu
     """
     Returns the i-th GPU if GPU is available, else CPU
     A negative value or a float will default to CPU
@@ -136,7 +137,7 @@ def get_device(i: Optional[int] = None) -> torch.device:
     return d
 
 
-def set_visible_device(devices: List[int] = [0]): #
+def set_visible_device(devices: List[int] = [0]): #类型注解 表示是一个整数列表。等于0表示这是默认参数。
     """
     Set the visible GPU(s) using env variable.
     """
@@ -144,7 +145,7 @@ def set_visible_device(devices: List[int] = [0]): #
     os.environ["CUDA_VISIBLE_DEVICES"] = ",".join([str(i) for i in devices])
 
 
-def is_json_file(fname: str) -> bool:
+def is_json_file(fname: str) -> bool: 
     """
     Return whether the given file is a json
     >>> is_json_file("hello.json")
@@ -159,7 +160,7 @@ def is_json_file(fname: str) -> bool:
     return False
 
 
-def read_newline_file(fname: str, comment_char: str = "#") -> List[str]:
+def read_newline_file(fname: str, comment_char: str = "#") -> List[str]: #读取一个以换行符分隔的文件。忽略comment_char开头的
     """
     Read the newline delimited file, ignoring lines starting with
     comment_char
@@ -169,7 +170,8 @@ def read_newline_file(fname: str, comment_char: str = "#") -> List[str]:
     return retval
 
 
-def read_fasta(fname: str) -> Dict[str, str]:
+def read_fasta(fname: str) -> Dict[str, str]: 
+    """读取 FASTA 格式的文件，返回一个字典，键为序列名称，值为对应的序列。"""
     """Read fa file, returning a dict of seq names to seqs"""
     retval = {}
     curr_key, curr_seq = "", ""
@@ -290,7 +292,7 @@ def isnotebook() -> bool:
         return False  # Probably standard Python interpreter
 
 
-def seed_all(seed: int):
+def seed_all(seed: int): #随机数种子
     """Seed all RNGs"""
     # https://pytorch.org/docs/stable/notes/randomness.html
     random.seed(seed)
