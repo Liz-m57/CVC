@@ -70,25 +70,33 @@ AMINO_ACIDS_WITH_ALL_ADDITIONAL_TO_IDX = {
 }
 
 
-class SequenceMasker:
+class SequenceMasker: #此函数为对SequenceMasker类的定义
     """Mask one position in each sequence for evaluation (NOT FOR TRAINING)"""
 
     def __init__(self, seq: Union[str, List[str]], seed: int = 4581):
+             # 该init函数为初始化方法，用于创建对象时初始化属性
+            #来自于 typing 模块的类型提示表示法。意为是str类型或者由str组成的list都可以。
         self._seed = seed
-        self.rng = np.random.default_rng(seed=seed)
+        self.rng = np.random.default_rng(seed=seed) #np创建随机数
         self.unmasked = [seq] if isinstance(seq, str) else seq
-        self._masked_indices = []
-        self.unmasked_msa = muscle.run_muscle(self.unmasked)
+            #isinstance(object, classinfo) 检查对象是否为指定类型/该类型的集合
+            #seq是str类型则返回成列表
+        self._masked_indices = [] #创建空列表
+        self.unmasked_msa = muscle.run_muscle(self.unmasked) #返回多重比对后的结果
 
-    @cached_property
+    
+    '''
+    装饰器，将类的方法转换为一个属性，该属性的值计算一次，然后在实例的生命周期中将其缓存作为普通属性。确保掩码操作只执行一次
+    '''
+    @cached_property 
     def masked(self) -> List[str]:
         retval = []
         for unmasked in self.unmasked:
             aa = list(unmasked)
-            mask_idx = self.rng.integers(0, len(aa))
-            assert 0 <= mask_idx < len(aa)
+            mask_idx = self.rng.integers(0, len(aa)) #在[0,len(aaseq))间，取种子产生的随机一个整数
+            assert 0 <= mask_idx < len(aa) #assert条件不满足则报错崩溃。后为条件
             self._masked_indices.append(mask_idx)
-            aa[mask_idx] = MASK
+            aa[mask_idx] = MASK #通过下标索引修改列表的值
             retval.append(" ".join(aa))  # Space is necessary for tokenizer
         assert len(self._masked_indices) == len(self)
         return retval
