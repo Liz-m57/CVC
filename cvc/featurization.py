@@ -60,7 +60,7 @@ AMINO_ACIDS_TO_IDX = {aa: i for i, aa in enumerate(AMINO_ACIDS)}
 # CLS = "&"
 # for bulk trb model
 PAD = "$"
-MASK = "."
+MASK = "." #全局变量。在定义后的代码中，函数内还是函数外都可以被访问
 UNK = "?"
 SEP = "|"
 CLS = "*"
@@ -82,8 +82,7 @@ class SequenceMasker: #此函数为对SequenceMasker类的定义
             #isinstance(object, classinfo) 检查对象是否为指定类型/该类型的集合
             #seq是str类型则返回成列表
         self._masked_indices = [] #创建空列表
-        self.unmasked_msa = muscle.run_muscle(self.unmasked) #返回多重比对后的结果
-
+        self.unmasked_msa = muscle.run_muscle(self.unmasked) #返回多重比对后的结果。包含n(sequence)的相似值
     
     '''
     装饰器，将类的方法转换为一个属性，该属性的值计算一次，然后在实例的生命周期中将其缓存作为普通属性。确保掩码操作只执行一次
@@ -92,13 +91,16 @@ class SequenceMasker: #此函数为对SequenceMasker类的定义
     def masked(self) -> List[str]:
         retval = []
         for unmasked in self.unmasked:
-            aa = list(unmasked)
+            aa = list(unmasked) #aa是列表中的一条序列
             mask_idx = self.rng.integers(0, len(aa)) #在[0,len(aaseq))间，取种子产生的随机一个整数
             assert 0 <= mask_idx < len(aa) #assert条件不满足则报错崩溃。后为条件
-            self._masked_indices.append(mask_idx)
-            aa[mask_idx] = MASK #通过下标索引修改列表的值
+            self._masked_indices.append(mask_idx) #mask的位置记录在self对象的_masked_indices属性中
+            aa[mask_idx] = MASK #通过下标索引修改列表的值。MASK为变量名，变量值在函数外定义为"."
             retval.append(" ".join(aa))  # Space is necessary for tokenizer
+                #将列表中元素用空格连接。 retval存储mask后的序列，
         assert len(self._masked_indices) == len(self)
+            #右返回，序列列表的长度，即序列的条数
+            #左返回记录序列mask的位置的列表。该语句意即保证for循环中该属性赋值语句执行
         return retval
 
     @cached_property
@@ -106,11 +108,13 @@ class SequenceMasker: #此函数为对SequenceMasker类的定义
         """Return the masked amino acids"""
         _ = self.masked  # Ensure that this has been generated
         return [
-            self.unmasked[i][mask_idx]
-            for i, mask_idx in enumerate(self._masked_indices)
+            self.unmasked[i][mask_idx] #self.unmasked[i] 为第i条序列的字符串，直接通过双重索引访问被mask的位置
+            for i, mask_idx in enumerate(self._masked_indices) #在迭代可迭代对象时，同时获取索引和值
+            #这两行为列表推导式：[<expression> for <item> in <iterable>]
+            #Python 允许在圆括号、方括号、花括号内直接进行换行，不用使用反斜杠
         ]
 
-    def __len__(self) -> int:
+    def __len__(self) -> int: #"__xx__"是类的特殊方法。调用len（）后不再使用普通函数，而是这个函数
         return len(self.unmasked)
 
     def get_naive_predictions(
@@ -118,35 +122,62 @@ class SequenceMasker: #此函数为对SequenceMasker类的定义
         k: int,
         method: Literal[
             "most_common", "random", "most_common_positional"
-        ] = "most_common",
+        ] = "most_common", #Literal[],指定method变量只能包含有限的字面值
     ) -> List[List[str]]:
         """
         Return naive predictions for each of the masked sequences
         Each entry in the list is a list of the top k predictions
         """
-        if method == "most_common":
-            cnt = collections.Counter()
+        #返回所有未掩码序列加起来最常见的前k个氨基酸。
+        if method == "most_common": 
+            cnt = collections.Counter() #计数并返回内容和次数
+                #cnt形式：({'b': 4, 'a': 3, 'c': 1})
             for seq in self.unmasked:
-                cnt.update(seq)
-            top_k = [k for k, v in cnt.most_common(k)]
-            return [top_k] * len(self)
+                cnt.update(seq) #每次循环都将seq的计数信息，更新到cnt对象中。最终是总的计数。
+                # 输入字符串，统计单个字符数量
+            top_k = [k for k, v in cnt.most_common(k)]  #返回未掩码序列中前k个出现次数最多的氨基酸
+            #列表推导式中的变量名k,v只在推导式的上下文中有效。与外部变量无关。与循环式里的变量作用域相同。
+            #以列表内嵌套元组的形式：[('b', 4), ('a', 3)]
+            return [top_k] * len(self) #创建包含n个top_k列表的大列表，为嵌套列表
+            
+        #返回每条序列，掩码位置上的pos_most_common（由msa得到）    
         elif method == "most_common_positional":
             # Create a matrix where each row corresponds to a position
-            max_len = len(self.unmasked_msa[0])
-            seqs_matrix = np.stack([np.array(list(s)) for s in self.unmasked_msa]).T
+            max_len = len(self.unmasked_msa[0]) #多重比对后的序列长度，均相等
+            seqs_matrix = np.stack([np.array(list(s)) for s in self.unmasked_msa]).T #所有msa结果储存
+            #list()将字符串转换为列表，元素为单个字符
+            #生成数组后，np.stack堆叠数组,生成二维数组（[i][j]）
+            #转置后，行列互换
+            '''
+            >>> a
+            array([['-', 'C', 'A', 'T', 'T', '-'],
+            ['A', 'C', 'G', 'T', '-', '-']], dtype='<U1')
+            >>> a.T
+            array([['-', 'A'],
+            ['C', 'C'],
+            ['A', 'G'],
+            ['T', 'T'],
+            ['T', '-'],
+            ['-', '-']], dtype='<U1')
+            '''
+            
             assert seqs_matrix.shape == (max_len, len(self))
+                #确保列数为序列个数，行数为序列长度
 
             # Per-position predictions
-            per_pos_most_common = []
+            per_pos_most_common = [] #存储每个位置上最常见的氨基酸
             for i in range(max_len):
                 # Excludes padding bases
                 cnt = collections.Counter(
                     [aa for aa in seqs_matrix[i] if aa in AMINO_ACIDS]
-                )
+                ) #对对齐后，每个位置上最常出现的氨基酸进行统计
                 per_pos_most_common.append([aa for aa, _n, in cnt.most_common(k)])
+                #写入包含i号位前k个aa的列表
             #
             retval = [per_pos_most_common[i] for i in self._masked_indices]
+                # 返回序列被掩码位置的pos_most_common氨基酸，按序列顺序
             return retval
+            
         elif method == "random":
             baseline_naive_rng = np.random.default_rng(seed=self._seed)
             retval = []
