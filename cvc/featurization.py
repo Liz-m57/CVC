@@ -67,7 +67,7 @@ CLS = "*"
 AMINO_ACIDS_WITH_ALL_ADDITIONAL = AMINO_ACIDS + PAD + MASK + UNK + SEP + CLS
 AMINO_ACIDS_WITH_ALL_ADDITIONAL_TO_IDX = {
     aa: i for i, aa in enumerate(AMINO_ACIDS_WITH_ALL_ADDITIONAL)
-}
+} #{键:值} 为字典生成器。 字典中键为aa，值为数字
 
 
 class SequenceMasker: #此函数为对SequenceMasker类的定义
@@ -178,20 +178,24 @@ class SequenceMasker: #此函数为对SequenceMasker类的定义
                 # 返回序列被掩码位置的pos_most_common氨基酸，按序列顺序
             return retval
             
+        #返回每个序列k个相同的随机氨基酸    
         elif method == "random":
             baseline_naive_rng = np.random.default_rng(seed=self._seed)
             retval = []
             for _i in range(len(self)):
+                    #range 从0开始
                 idx = [
                     baseline_naive_rng.integers(0, len(AMINO_ACIDS)) for _j in range(k)
-                ]
+                ] #AMINO_ACIDS为字符串,包含21个氨基酸
+                #生成k个相同的随机数。长度在0-21，随机种子固定。
                 retval.append([AMINO_ACIDS[i] for i in idx])
+                    #生成上述随机index对应的氨基酸，自然也是相同的k个
             return retval
         else:
             raise ValueError(f"Unrecognized method: {method}")
 
-
-def adheres_to_vocab(s: str, vocab: str = AMINO_ACIDS) -> bool:
+#输入的字符串 s 是否只包含在给定的词汇表 vocab 中的字符
+def adheres_to_vocab(s: str, vocab: str = AMINO_ACIDS) -> bool: 
     """
     Returns whether a given string contains only characters from vocab
     >>> adheres_to_vocab("RKDES")
@@ -200,21 +204,26 @@ def adheres_to_vocab(s: str, vocab: str = AMINO_ACIDS) -> bool:
     True
     """
     return set(s).issubset(set(vocab))
+        #set() 转换为集合。
+        #issubset 看s是否是vocab的子集
+        
 
-
+#将vocab写入fname 文件，返回fname
 def write_vocab(vocab: Iterable[str], fname: str) -> str:
     """
     Write the vocabulary to the fname, one entry per line
     Mostly for compatibility with transformer BertTokenizer
+    Iterable 是一个可以用 for 循环遍历的对象，包括列表 (list)、字符串 (str)
+    字典 (dict)、元组 (tuple)、集合 (set)等
     """
     with open(fname, "w") as sink:
         for v in vocab:
             sink.write(v + "\n")
     return fname
 
-
+#设置BertTokenizer参数，
 def get_aa_bert_tokenizer(
-    max_len: int = 64, d=AMINO_ACIDS_WITH_ALL_ADDITIONAL_TO_IDX
+    max_len: int = 64, d=AMINO_ACIDS_WITH_ALL_ADDITIONAL_TO_IDX #代表氨基酸以及可能额外的字符到索引的映射表
 ) -> BertTokenizer:
     """
     Tokenizer for amino acid sequences. Not *exactly* the same as BertTokenizer
@@ -226,21 +235,26 @@ def get_aa_bert_tokenizer(
     with tempfile.TemporaryDirectory() as tempdir:
         vocab_fname = write_vocab(d, os.path.join(tempdir, "vocab.txt"))
         tok = BertTokenizer(
-            vocab_fname,
-            do_lower_case=False,
-            do_basic_tokenize=True,
-            tokenize_chinese_chars=False,
-            pad_token=PAD,
-            mask_token=MASK,
-            unk_token=UNK,
-            sep_token=SEP,
-            cls_token=CLS,
-            model_max_len=max_len,
-            padding_side="right",
+            vocab_fname, #词汇表，包含了模型所需的所有词及其对应的索引
+            do_lower_case=False, #表明不对输入进行小写化。
+            do_basic_tokenize=True, #进行基本的分词处理，通常包括将文本分割成单词和标点符号
+            tokenize_chinese_chars=False, #不处理中文字符
+            pad_token=PAD, #填充符，以使所有输入序列具有相同的长度。通常在批处理时需要此操作。
+            mask_token=MASK, #掩码符，输入中出现的词不在词汇表中，它们会被替换为 unk_token
+            unk_token=UNK, #未知字符
+            sep_token=SEP, #分隔符。输入多个句子时用于区分句子
+            cls_token=CLS, #分类符。用于分类场景    
+            model_max_len=max_len, #模型接受的最大输入长度
+            padding_side="right", 
+            """
+            指定填充方向。right 表示在序列的右侧填充。
+            大多数 Transformer 架构（如 BERT）都使用右侧填充，
+            因为它们能够同时处理序列中的所有位置，填充的顺序对它们影响不大。
+            """
         )
     return tok
 
-
+#加载预训练模型
 def get_pretrained_bert_tokenizer(path: str) -> BertTokenizer:
     """Get the pretrained BERT tokenizer from given path"""
     tok = BertTokenizer.from_pretrained(
@@ -277,7 +291,7 @@ def is_whitespaced(seq: str) -> bool:
     """
     tok = list(seq)
     spaces = [t for t in tok if t.isspace()]
-    if len(spaces) == floor(len(seq) / 2):
+    if len(spaces) == floor(len(seq) / 2): #floor向下取整
         return True
     return False
 
@@ -301,9 +315,9 @@ def remove_whitespace(seq: str) -> str:
     >>> remove_whitespace("RKIL")
     'RKIL'
     """
-    return "".join(seq.split())
+    return "".join(seq.split()) #分隔符默认为空格
 
-
+#接受一个字符串 seq 和一个可选的字母表 alphabet，返回该字符串对于字母表 alphabet的 one-hot 编码
 def one_hot(seq: str, alphabet: Optional[str] = AMINO_ACIDS) -> np.ndarray:
     """
     One-hot encode the input string. Since pytorch convolutions expect
@@ -311,18 +325,25 @@ def one_hot(seq: str, alphabet: Optional[str] = AMINO_ACIDS) -> np.ndarray:
     When one hot encoding, we ignore the pad characters, encoding them as
     a vector of 0's instead
     """
-    if not seq:
-        assert alphabet
+    if not seq: 
+        #if not判断是否为none。None, False, 空字符串"", 0, 空列表[], 空字典{}, 空元组()都相当于False
+        assert alphabet #确保非空、非零或非 None
         return np.zeros((len(alphabet), 1), dtype=np.float32)
     if not alphabet:
-        alphabet = utils.dedup(seq)
+        alphabet = utils.dedup(seq) #按字符串中字符出现的顺序，再去重。为列表形式
         logging.info(f"No alphabet given, assuming alphabet of: {alphabet}")
-    seq_arr = np.array(list(seq))
+    seq_arr = np.array(list(seq)) #转换为数组
     # This implementation naturally ignores the pad character if not provided
     # in the alphabet
     retval = np.stack([seq_arr == char for char in alphabet]).astype(float).T
+        #np数组的广播特性
+        #.astype() 将布尔值转换为浮点型（True -> 1.0，False -> 0.0） 
+        #转置后，将seq转为数组，列为alphabet，行为seq的位置。是则为1，不是则为0
+    
     assert len(retval) == len(seq), f"Mismatched lengths: {len(seq)} {retval.shape}"
+        #len(np.array)返回行值
     return retval.astype(np.float32).T
+        #行为seq的pos某列为alphabet
 
 
 def idx_encode(
