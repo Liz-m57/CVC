@@ -10,8 +10,8 @@ from typing import *
 
 import cvc.utils as utils
 
-
-def run_muscle(sequences: Iterable[str], fast: bool = False) -> List[str]:
+#返回muscle的比对结果，是有gap(-)对齐后的序列
+def run_muscle(sequences: Iterable[str], fast: bool = False) -> List[str]: 
     """
     Run MUSCLE on the given input sequences
     > run_muscle(["DEASV", "KKDEASV", "KKVVVSV"])
